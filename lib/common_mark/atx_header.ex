@@ -24,20 +24,27 @@ defmodule CommonMark.AtxHeader do
     lookahead_not(string(" #"))
     |> concat(header_char)
     |> times(min: 1)
-    |> reduce({List, :to_string, []})
+
+  closing_hashes = suffix |> optional(whitespace) |> concat(end_of_header)
+
+  extra_content = suffix |> repeat(header_char) |> ignore(end_of_header)
 
   atx_header =
     ignore(optional(ascii_string([?\s], max: 3)))
     |> concat(prefix)
     |> optional(ignore(whitespace))
     |> optional(content)
-    |> optional(ignore(suffix |> optional(whitespace)))
-    |> ignore(end_of_header)
+    |> choice([
+      ignore(closing_hashes),
+      extra_content
+    ])
     |> post_traverse(:tag_with_level)
 
   @doc false
-  def tag_with_level(_rest, [content, prefix] = _args, context, _line, _offset) do
-    result = [{:header, [level: byte_size(prefix)], content}]
+  def tag_with_level(_rest, args, context, _line, _offset) do
+    [prefix | content] = :lists.reverse(args)
+    binary_content = List.to_string(content)
+    result = [{:header, [level: byte_size(prefix)], binary_content}]
     {result, context}
   end
 
