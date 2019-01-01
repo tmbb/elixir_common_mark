@@ -25,19 +25,22 @@ defmodule CommonMark.AtxHeader do
     |> concat(header_char)
     |> times(min: 1)
 
-  closing_hashes = suffix |> optional(whitespace) |> concat(end_of_header)
+  closing_hashes = optional(whitespace) |> concat(end_of_header)
 
-  extra_content = suffix |> repeat(header_char) |> ignore(end_of_header)
+  extra_content = repeat(header_char) |> ignore(end_of_header)
 
   atx_header =
     ignore(optional(ascii_string([?\s], max: 3)))
     |> concat(prefix)
     |> optional(ignore(whitespace))
     |> optional(content)
-    |> choice([
-      ignore(closing_hashes),
-      extra_content
-    ])
+    |> optional(
+      suffix
+      |> choice([
+        ignore(closing_hashes),
+        extra_content
+      ])
+    )
     |> post_traverse(:tag_with_level)
 
   @doc false
